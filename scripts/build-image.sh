@@ -49,10 +49,16 @@ apk -X https://dl-cdn.alpinelinux.org/alpine/latest-stable/main \
     alpine-base \
     linux-virt \
     frotz \
+    openssh-server-pam \
     grub \
     grub-efi \
     e2fsprogs \
     mkinitfs
+
+echo "=== Compiling nscd-any ==="
+mkdir -p "$ROOTFS/usr/local/sbin"
+gcc -static -O2 -Wall -o "$ROOTFS/usr/local/sbin/nscd-any" /src/nscd-any.c
+chmod 755 "$ROOTFS/usr/local/sbin/nscd-any"
 
 echo "=== Copying overlay files ==="
 cp -a /rootfs/* "$ROOTFS/"
@@ -74,8 +80,9 @@ UUID=$ROOT_UUID  /          ext4  defaults,noatime  0  1
 UUID=$ESP_UUID   /boot/efi  vfat  defaults          0  0
 EOF
 
-# Create user
+# Create user (unlock account — replace ! with * in shadow)
 chroot "$ROOTFS" adduser -D -s /bin/sh "$USERNAME"
+sed -i "s/^${USERNAME}:!:/${USERNAME}:*:/" "$ROOTFS/etc/shadow"
 
 # Auto-login script
 cat > "$ROOTFS/usr/local/bin/autologin" << EOF
@@ -104,6 +111,8 @@ chroot "$ROOTFS" rc-update add hwclock boot
 chroot "$ROOTFS" rc-update add modules boot
 chroot "$ROOTFS" rc-update add networking boot
 chroot "$ROOTFS" rc-update add hostname boot
+chroot "$ROOTFS" rc-update add nscd-any default
+chroot "$ROOTFS" rc-update add sshd default
 chroot "$ROOTFS" rc-update add killprocs shutdown
 chroot "$ROOTFS" rc-update add mount-ro shutdown
 chroot "$ROOTFS" rc-update add savecache shutdown

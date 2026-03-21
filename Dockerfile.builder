@@ -11,6 +11,7 @@ RUN apk add --no-cache \
     mkinitfs \
     parted \
     util-linux \
-    wget
+    wget \
+    build-base
 
 WORKDIR /build

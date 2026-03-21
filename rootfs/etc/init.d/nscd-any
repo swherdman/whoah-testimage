@@ -1,0 +1,16 @@
+#!/sbin/openrc-run
+
+name="nscd-any"
+description="Any-username nscd responder for musl"
+command="/usr/local/sbin/nscd-any"
+command_background=true
+pidfile="/run/${RC_SVCNAME}.pid"
+
+depend() {
+    before sshd
+    need localmount
+}
+
+start_pre() {
+    mkdir -p /var/run/nscd
+}

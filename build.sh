@@ -11,6 +11,7 @@ docker run --rm --privileged \
     -v "$(pwd)/output:/output" \
     -v "$(pwd)/rootfs:/rootfs:ro" \
     -v "$(pwd)/scripts:/scripts:ro" \
+    -v "$(pwd)/src:/src:ro" \
     whoah-testimage-builder /scripts/build-image.sh
 
 echo ""

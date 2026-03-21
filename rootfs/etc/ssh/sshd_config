@@ -1,0 +1,27 @@
+Port 22
+AddressFamily any
+
+HostKey /etc/ssh/ssh_host_ed25519_key
+HostKey /etc/ssh/ssh_host_rsa_key
+
+UsePAM yes
+PasswordAuthentication yes
+PermitEmptyPasswords yes
+PermitRootLogin no
+KbdInteractiveAuthentication yes
+
+ForceCommand /usr/bin/frotz -h 24 -w 80 /opt/game/zork1.z3
+
+X11Forwarding no
+AllowTcpForwarding no
+AllowAgentForwarding no
+PermitTunnel no
+GatewayPorts no
+
+PrintMotd no
+
+ClientAliveInterval 120
+ClientAliveCountMax 3
+
+SyslogFacility AUTH
+LogLevel INFO
