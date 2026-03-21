@@ -2,7 +2,7 @@
 set -e
 
 IMAGE="/output/whoah-testimage.raw"
-IMAGE_SIZE="512M"
+IMAGE_SIZE="384M"
 ROOTFS="/mnt/root"
 GAME_URL="https://eblong.com/infocom/gamefiles/zork1-r119-s880429.z3"
 USERNAME="whoah-testimage-user"
@@ -13,9 +13,9 @@ truncate -s "$IMAGE_SIZE" "$IMAGE"
 echo "=== Partitioning (GPT + ESP + root) ==="
 parted -s "$IMAGE" \
     mklabel gpt \
-    mkpart ESP fat32 1MiB 129MiB \
+    mkpart ESP fat32 1MiB 65MiB \
     set 1 esp on \
-    mkpart root ext4 129MiB 100%
+    mkpart root ext4 65MiB 100%
 
 echo "=== Setting up loop device ==="
 LOOP=$(losetup -f --show "$IMAGE")
@@ -157,6 +157,15 @@ chroot "$ROOTFS" grub-install \
     --boot-directory=/boot \
     --removable \
     --no-nvram
+
+echo "=== Removing build-only files ==="
+rm -f "$ROOTFS/boot/System.map-"*
+rm -f "$ROOTFS/usr/bin/grub-"*
+rm -f "$ROOTFS/usr/sbin/grub-"*
+rm -rf "$ROOTFS/usr/lib/grub"
+rm -f "$ROOTFS/usr/bin/mkinitfs"
+rm -rf "$ROOTFS/etc/mkinitfs"
+rm -rf "$ROOTFS/var/cache/apk/"*
 
 echo "=== Cleanup ==="
 umount "$ROOTFS/proc" || true
