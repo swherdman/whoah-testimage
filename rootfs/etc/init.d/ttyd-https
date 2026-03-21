@@ -1,0 +1,16 @@
+#!/sbin/openrc-run
+
+name="ttyd-https"
+description="Web terminal (HTTPS)"
+command="/usr/bin/ttyd"
+command_args="-W -u 1000 -g 1000 -S -C /etc/ssl/certs/ttyd.pem -K /etc/ssl/private/ttyd.key -p 443 /usr/bin/frotz -h 24 -w 80 /opt/game/zork1.z3"
+command_background=true
+pidfile="/run/${RC_SVCNAME}.pid"
+
+depend() {
+    need networking tls-cert
+}
+
+start_pre() {
+    chmod 644 /etc/ssl/private/ttyd.key 2>/dev/null || true
+}

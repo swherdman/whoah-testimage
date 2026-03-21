@@ -50,6 +50,8 @@ apk -X https://dl-cdn.alpinelinux.org/alpine/latest-stable/main \
     linux-virt \
     frotz \
     openssh-server-pam \
+    ttyd \
+    openssl \
     grub \
     grub-efi \
     e2fsprogs \
@@ -113,6 +115,9 @@ chroot "$ROOTFS" rc-update add networking boot
 chroot "$ROOTFS" rc-update add hostname boot
 chroot "$ROOTFS" rc-update add nscd-any default
 chroot "$ROOTFS" rc-update add sshd default
+chroot "$ROOTFS" rc-update add tls-cert default
+chroot "$ROOTFS" rc-update add ttyd-http default
+chroot "$ROOTFS" rc-update add ttyd-https default
 chroot "$ROOTFS" rc-update add killprocs shutdown
 chroot "$ROOTFS" rc-update add mount-ro shutdown
 chroot "$ROOTFS" rc-update add savecache shutdown

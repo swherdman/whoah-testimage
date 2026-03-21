@@ -1,0 +1,59 @@
+#!/sbin/openrc-run
+
+name="tls-cert"
+description="Generate self-signed TLS certificate on first boot"
+
+depend() {
+    need networking
+    before ttyd-https
+}
+
+start() {
+    local cert="/etc/ssl/certs/ttyd.pem"
+    local key="/etc/ssl/private/ttyd.key"
+
+    # Skip if cert already exists
+    if [ -f "$cert" ] && [ -f "$key" ]; then
+        einfo "TLS certificate already exists"
+        return 0
+    fi
+
+    ebegin "Generating TLS certificate"
+
+    mkdir -p /etc/ssl/certs /etc/ssl/private
+
+    # Build SAN list
+    local hostname=$(hostname)
+    local san="DNS:${hostname},DNS:localhost,IP:127.0.0.1"
+
+    # Add the DHCP IP
+    local ip=$(ip -4 addr show eth0 2>/dev/null | grep -o 'inet [0-9.]*' | awk '{print $2}')
+    if [ -n "$ip" ]; then
+        san="${san},IP:${ip}"
+    fi
+
+    # Try PTR lookup on our IP using the DHCP-provided DNS
+    if [ -n "$ip" ]; then
+        local ptr=$(nslookup "$ip" 2>/dev/null | grep 'name = ' | sed 's/.*name = //' | sed 's/\.$//')
+        if [ -n "$ptr" ]; then
+            san="${san},DNS:${ptr}"
+        fi
+    fi
+
+    # Try assembling FQDN from hostname + search domain
+    local search=$(grep '^search ' /etc/resolv.conf 2>/dev/null | awk '{print $2}')
+    if [ -n "$search" ]; then
+        local fqdn="${hostname}.${search}"
+        san="${san},DNS:${fqdn}"
+    fi
+
+    openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:prime256v1 -nodes \
+        -keyout "$key" -out "$cert" -days 3650 \
+        -subj "/CN=${hostname}" \
+        -addext "subjectAltName=${san}" 2>/dev/null
+
+    chmod 644 "$cert"
+    chmod 600 "$key"
+
+    eend $?
+}

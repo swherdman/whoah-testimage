@@ -1,0 +1,12 @@
+#!/sbin/openrc-run
+
+name="ttyd-http"
+description="Web terminal (HTTP)"
+command="/usr/bin/ttyd"
+command_args="-W -u 1000 -g 1000 -p 80 /usr/bin/frotz -h 24 -w 80 /opt/game/zork1.z3"
+command_background=true
+pidfile="/run/${RC_SVCNAME}.pid"
+
+depend() {
+    need networking
+}
