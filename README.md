@@ -1,0 +1,120 @@
+# whoah-testimage
+
+A minimal Alpine Linux VM image for [Oxide](https://oxide.computer) racks. Designed as a lightweight test target for [whoah-cli](https://github.com/swherdman/whoah-cli) — deploy in seconds to validate connectivity across multiple protocols.
+
+Part of the [WHOAH project](https://swherdman.com/portfolio/whoah/).
+
+## What it provides
+
+| Protocol | Port | Details |
+|---|---|---|
+| Serial | ttyS0 | Auto-login shell |
+| SSH | 22 | Accepts any username, no authentication required |
+| HTTP | 80 | Web terminal ([ttyd](https://github.com/tsl0922/ttyd)) |
+| HTTPS | 443 | Web terminal with self-signed TLS |
+
+The image boots via UEFI, obtains an IP via DHCP, and starts all services automatically. TLS certificates are generated on first boot.
+
+## Quick start
+
+### Download
+
+```bash
+curl -LO https://github.com/swherdman/whoah-testimage/releases/download/v0.1.0/whoah-testimage.raw.gz
+gunzip whoah-testimage.raw.gz
+```
+
+### Deploy
+
+```bash
+# Upload as disk
+oxide disk import --project <project> \
+    --description "It is pitch black." \
+    --path whoah-testimage.raw \
+    --disk whoah-testimage-boot \
+    --disk-block-size 512
+
+# Create instance
+cat << 'EOF' | oxide instance create --project <project> --json-body /dev/stdin
+{
+    "description": "It is pitch black.",
+    "hostname": "whoah-testimage",
+    "memory": 1073741824,
+    "name": "whoah-testimage",
+    "ncpus": 1,
+    "disks": [{"type": "attach", "name": "whoah-testimage-boot"}],
+    "start": true
+}
+EOF
+
+# Attach an external IP for inbound access
+oxide instance external-ip attach-ephemeral \
+    --project <project> \
+    --instance whoah-testimage
+```
+
+### Firewall
+
+The default VPC firewall only allows SSH. To enable HTTP and HTTPS:
+
+```bash
+oxide vpc firewall-rules view --project <project> --vpc default \
+  | jq '.rules += [
+      {
+        "name": "allow-http",
+        "description": "allow inbound HTTP",
+        "direction": "inbound",
+        "action": "allow",
+        "priority": 65534,
+        "status": "enabled",
+        "filters": {"ports": ["80"], "protocols": [{"type": "tcp"}]},
+        "targets": [{"type": "vpc", "value": "default"}]
+      },
+      {
+        "name": "allow-https",
+        "description": "allow inbound HTTPS",
+        "direction": "inbound",
+        "action": "allow",
+        "priority": 65534,
+        "status": "enabled",
+        "filters": {"ports": ["443"], "protocols": [{"type": "tcp"}]},
+        "targets": [{"type": "vpc", "value": "default"}]
+      }
+    ]
+    | del(.rules[].id, .rules[].time_created, .rules[].time_modified, .rules[].vpc_id)' \
+  > /tmp/fw.json
+
+oxide vpc firewall-rules update --project <project> --vpc default --json-body /tmp/fw.json
+```
+
+### Connect
+
+```bash
+# Serial console
+oxide instance serial console --project <project> --instance whoah-testimage
+
+# SSH
+ssh user@<instance-ip>
+
+# HTTP / HTTPS
+open http://<instance-ip>
+open https://<instance-ip>
+```
+
+## Image details
+
+- Alpine Linux 3.21 / kernel 6.18 (linux-virt)
+- 384MB raw / ~80MB gzipped
+- UEFI boot (GPT + GRUB)
+- NVMe + virtio drivers for Oxide/Propolis
+- DHCP networking
+
+## Building from source
+
+Requires Docker with `--privileged` support.
+
+```bash
+./build.sh
+```
+
+See [docs/building.md](docs/building.md) for detailed build instructions and project structure.
